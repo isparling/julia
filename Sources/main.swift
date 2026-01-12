@@ -53,47 +53,73 @@ class JuliaSetFilter: CIFilter {
 final class CameraManager: NSObject, ObservableObject {
   // MARK: Public
   @Published var ciImage: CIImage? = nil
+  @Published var availableCameras: [AVCaptureDevice] = []
+  @Published var selectedCamera: AVCaptureDevice?
 
   // MARK: Private
   private let session = AVCaptureSession()
   private let queue = DispatchQueue(label: "cameraQueue")
   private let ciContext = CIContext()
+  private var currentInput: AVCaptureDeviceInput?
 
   // MARK: Init
   override init() {
     super.init()
+    refreshCameraList()
     setupSession()
     session.startRunning()
   }
 
-  private func bestVideoDevice() -> AVCaptureDevice? {
-    // // Prefer the built‑in camera (if you’re on a MacBook)
-    if let builtIn = AVCaptureDevice.default(
-      .builtInWideAngleCamera,
-      for: .video,
-      position: .unspecified)
-    {
-      return builtIn
+  func refreshCameraList() {
+    let discoverySession = AVCaptureDevice.DiscoverySession(
+      deviceTypes: [.builtInWideAngleCamera, .continuityCamera, .external],
+      mediaType: .video,
+      position: .unspecified
+    )
+    availableCameras = discoverySession.devices
+    if selectedCamera == nil {
+      selectedCamera = availableCameras.first
+    }
+  }
+
+  func selectCamera(_ device: AVCaptureDevice) {
+    guard device.uniqueID != selectedCamera?.uniqueID else { return }
+    selectedCamera = device
+
+    session.beginConfiguration()
+
+    // Remove existing input
+    if let currentInput = currentInput {
+      session.removeInput(currentInput)
     }
 
-    // Fallback to a Continuity Camera (iPhone/iPad, or USB camera that Apple recognises)
-    return AVCaptureDevice.default(
-      .continuityCamera,
-      for: .video,
-      position: .unspecified)
+    // Add new input
+    guard let newInput = try? AVCaptureDeviceInput(device: device) else {
+      print("Cannot create input from \(device.localizedName)")
+      session.commitConfiguration()
+      return
+    }
+
+    if session.canAddInput(newInput) {
+      session.addInput(newInput)
+      currentInput = newInput
+    }
+
+    session.commitConfiguration()
   }
 
   private func setupSession() {
-    guard let device = bestVideoDevice() else {
-      print("❌ No suitable camera found")
+    guard let device = selectedCamera ?? availableCameras.first else {
+      print("No suitable camera found")
       return
     }
 
     guard let input = try? AVCaptureDeviceInput(device: device) else {
-      print("❌ Cannot create input from \(device.localizedName)")
+      print("Cannot create input from \(device.localizedName)")
       return
     }
 
+    currentInput = input
     if session.canAddInput(input) { session.addInput(input) }
 
     let output = AVCaptureVideoDataOutput()
@@ -104,7 +130,6 @@ final class CameraManager: NSObject, ObservableObject {
     output.setSampleBufferDelegate(self, queue: queue)
     if session.canAddOutput(output) { session.addOutput(output) }
 
-    // Keep 30 fps
     session.sessionPreset = .hd1920x1080
   }
 }
@@ -139,18 +164,43 @@ struct CameraView: View {
   private let ciContext = CIContext()
 
   var body: some View {
-    GeometryReader { geo in
-      if let ciImage = camera.ciImage,
-         let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
+    VStack(spacing: 0) {
+      // Camera picker
+      HStack {
+        Picker("Camera", selection: Binding(
+          get: { camera.selectedCamera?.uniqueID ?? "" },
+          set: { newID in
+            if let device = camera.availableCameras.first(where: { $0.uniqueID == newID }) {
+              camera.selectCamera(device)
+            }
+          }
+        )) {
+          ForEach(camera.availableCameras, id: \.uniqueID) { device in
+            Text(device.localizedName).tag(device.uniqueID)
+          }
+        }
+        .pickerStyle(.menu)
+        .frame(maxWidth: 300)
 
-        let nsSize = NSSize(width: ciImage.extent.width, height: ciImage.extent.height)
-        let nsImage = NSImage(cgImage: cgImage, size: nsSize)
+        Spacer()
+      }
+      .padding(8)
+      .background(Color.black.opacity(0.8))
 
-        Image(nsImage: nsImage)
-          .resizable()
-          .scaledToFit()
-      } else {
-        Color.black
+      // Camera feed
+      GeometryReader { geo in
+        if let ciImage = camera.ciImage,
+           let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
+
+          let nsSize = NSSize(width: ciImage.extent.width, height: ciImage.extent.height)
+          let nsImage = NSImage(cgImage: cgImage, size: nsSize)
+
+          Image(nsImage: nsImage)
+            .resizable()
+            .scaledToFit()
+        } else {
+          Color.black
+        }
       }
     }
     .background(Color.black)
