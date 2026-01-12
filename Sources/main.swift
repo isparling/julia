@@ -79,15 +79,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
     // Convert to CIImage
-    var inputImage = CIImage(cvPixelBuffer: pixelBuffer)
-
-    // Run a filter (you can swap this for your own)
-    let filter = CIFilter.sepiaTone()
-    filter.inputImage = inputImage
-    filter.intensity = 0.8
-    if let filtered = filter.outputImage {
-      inputImage = filtered
-    }
+    let inputImage = CIImage(cvPixelBuffer: pixelBuffer)
 
     // Publish to UI thread
     let finalImage = inputImage
