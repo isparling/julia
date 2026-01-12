@@ -8,6 +8,7 @@ import SwiftUI
 
 // MARK: - Video Capture Manager
 @available(macOS 14.0, *)
+@MainActor
 final class CameraManager: NSObject, ObservableObject {
   // MARK: Public
   @Published var ciImage: CIImage? = nil
@@ -16,7 +17,6 @@ final class CameraManager: NSObject, ObservableObject {
   private let session = AVCaptureSession()
   private let queue = DispatchQueue(label: "cameraQueue")
   private let ciContext = CIContext()
-  private let filter = CIFilter.sepiaTone()
 
   // MARK: Init
   override init() {
@@ -71,7 +71,7 @@ final class CameraManager: NSObject, ObservableObject {
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 @available(macOS 14.0, *)
 extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
-  func captureOutput(
+  nonisolated func captureOutput(
     _ output: AVCaptureOutput,
     didOutput sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection
@@ -82,6 +82,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     var inputImage = CIImage(cvPixelBuffer: pixelBuffer)
 
     // Run a filter (you can swap this for your own)
+    let filter = CIFilter.sepiaTone()
     filter.inputImage = inputImage
     filter.intensity = 0.8
     if let filtered = filter.outputImage {
@@ -89,8 +90,9 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     }
 
     // Publish to UI thread
-    DispatchQueue.main.async { [weak self] in
-      self?.ciImage = inputImage
+    let finalImage = inputImage
+    Task { @MainActor [weak self] in
+      self?.ciImage = finalImage
     }
   }
 }
