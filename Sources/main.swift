@@ -1,0 +1,134 @@
+// The Swift Programming Language
+// https://docs.swift.org/swift-book
+
+import AVFoundation
+import CoreImage
+import CoreImage.CIFilterBuiltins
+import SwiftUI
+
+// MARK: - Video Capture Manager
+@available(macOS 14.0, *)
+final class CameraManager: NSObject, ObservableObject {
+  // MARK: Public
+  @Published var ciImage: CIImage? = nil
+
+  // MARK: Private
+  private let session = AVCaptureSession()
+  private let queue = DispatchQueue(label: "cameraQueue")
+  private let ciContext = CIContext()
+  private let filter = CIFilter.sepiaTone()
+
+  // MARK: Init
+  override init() {
+    super.init()
+    setupSession()
+    session.startRunning()
+  }
+
+  private func bestVideoDevice() -> AVCaptureDevice? {
+    // // Prefer the built‑in camera (if you’re on a MacBook)
+    if let builtIn = AVCaptureDevice.default(
+      .builtInWideAngleCamera,
+      for: .video,
+      position: .unspecified)
+    {
+      return builtIn
+    }
+
+    // Fallback to a Continuity Camera (iPhone/iPad, or USB camera that Apple recognises)
+    return AVCaptureDevice.default(
+      .continuityCamera,
+      for: .video,
+      position: .unspecified)
+  }
+
+  private func setupSession() {
+    guard let device = bestVideoDevice() else {
+      print("❌ No suitable camera found")
+      return
+    }
+
+    guard let input = try? AVCaptureDeviceInput(device: device) else {
+      print("❌ Cannot create input from \(device.localizedName)")
+      return
+    }
+
+    if session.canAddInput(input) { session.addInput(input) }
+
+    let output = AVCaptureVideoDataOutput()
+    output.videoSettings = [
+      kCVPixelBufferPixelFormatTypeKey as String:
+        kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+    ]
+    output.setSampleBufferDelegate(self, queue: queue)
+    if session.canAddOutput(output) { session.addOutput(output) }
+
+    // Keep 30 fps
+    session.sessionPreset = .hd1920x1080
+  }
+}
+
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
+@available(macOS 14.0, *)
+extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
+  func captureOutput(
+    _ output: AVCaptureOutput,
+    didOutput sampleBuffer: CMSampleBuffer,
+    from connection: AVCaptureConnection
+  ) {
+    guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+    // Convert to CIImage
+    var inputImage = CIImage(cvPixelBuffer: pixelBuffer)
+
+    // Run a filter (you can swap this for your own)
+    filter.inputImage = inputImage
+    filter.intensity = 0.8
+    if let filtered = filter.outputImage {
+      inputImage = filtered
+    }
+
+    // Publish to UI thread
+    DispatchQueue.main.async { [weak self] in
+      self?.ciImage = inputImage
+    }
+  }
+}
+
+// MARK: - SwiftUI View
+@available(macOS 14.0, *)
+struct CameraView: View {
+  @StateObject private var camera = CameraManager()
+
+  var body: some View {
+    GeometryReader { geo in
+      if let ciImage = camera.ciImage {
+
+        let nsSize = NSSize(width: ciImage.extent.width, height: ciImage.extent.height)
+        let nsImage = NSImage(cgImage: ciImage.cgImage!, size: nsSize)
+
+        Image(nsImage: nsImage)
+          .resizable()
+          .scaledToFit()
+      } else {
+        Color.black
+      }
+    }
+    .background(Color.black)
+  }
+}
+
+// MARK: - App Entry Point
+
+@main
+struct JuliaSetCameraDemo: App {
+  var body: some Scene {
+    WindowGroup {
+      if #available(macOS 14.0, *) {
+        CameraView()
+      } else {
+        // break or do something?
+      }
+    }
+  }
+}

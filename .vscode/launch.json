@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:julia}",
+      "name": "Debug CameraDemo",
+      "target": "CameraDemo",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug CameraDemo"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:julia}",
+      "name": "Release CameraDemo",
+      "target": "CameraDemo",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release CameraDemo"
+    }
+  ]
+}

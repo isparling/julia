@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen2.5-coder:7b-instruct-q6_K": {
+          "name": "Qwen2.5 Coder 7B (local)",
+          // "tools": true,
+          "options": {
+            "num_ctx": 12288
+          }
+        },
+        "qwen2.5-coder:14b-instruct-q6_K": {
+          "name": "Qwen2.5 Coder 14B (local)",
+          // "tools": true,
+          "options": {
+            "num_ctx": 8192
+          }
+        },
+        "gpt-oss:20b": {
+          "name": "gpt-oss:20b"
+        }
+      }
+    },
+  },
+  "model": "gpt-oss:20b",
+}
