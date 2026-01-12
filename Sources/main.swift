@@ -101,13 +101,15 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 @available(macOS 14.0, *)
 struct CameraView: View {
   @StateObject private var camera = CameraManager()
+  private let ciContext = CIContext()
 
   var body: some View {
     GeometryReader { geo in
-      if let ciImage = camera.ciImage {
+      if let ciImage = camera.ciImage,
+         let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
 
         let nsSize = NSSize(width: ciImage.extent.width, height: ciImage.extent.height)
-        let nsImage = NSImage(cgImage: ciImage.cgImage!, size: nsSize)
+        let nsImage = NSImage(cgImage: cgImage, size: nsSize)
 
         Image(nsImage: nsImage)
           .resizable()
