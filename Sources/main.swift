@@ -48,7 +48,6 @@ class JuliaSetFilter: CIFilter {
 }
 
 // MARK: - Video Capture Manager
-@available(macOS 14.0, *)
 @MainActor
 final class CameraManager: NSObject, ObservableObject {
   // MARK: Public
@@ -71,10 +70,18 @@ final class CameraManager: NSObject, ObservableObject {
   }
 
   func refreshCameraList() {
+    #if os(macOS)
+    let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .continuityCamera, .external]
+    let position: AVCaptureDevice.Position = .unspecified
+    #else
+    let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .builtInUltraWideCamera, .builtInTelephotoCamera]
+    let position: AVCaptureDevice.Position = .back
+    #endif
+
     let discoverySession = AVCaptureDevice.DiscoverySession(
-      deviceTypes: [.builtInWideAngleCamera, .continuityCamera, .external],
+      deviceTypes: deviceTypes,
       mediaType: .video,
-      position: .unspecified
+      position: position
     )
     availableCameras = discoverySession.devices
     if selectedCamera == nil {
@@ -135,7 +142,6 @@ final class CameraManager: NSObject, ObservableObject {
 }
 
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
-@available(macOS 14.0, *)
 extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
   nonisolated func captureOutput(
     _ output: AVCaptureOutput,
@@ -158,46 +164,54 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
 }
 
 // MARK: - SwiftUI View
-@available(macOS 14.0, *)
 struct CameraView: View {
   @StateObject private var camera = CameraManager()
   private let ciContext = CIContext()
 
   var body: some View {
     VStack(spacing: 0) {
-      // Camera picker
-      HStack {
-        Picker("Camera", selection: Binding(
-          get: { camera.selectedCamera?.uniqueID ?? "" },
-          set: { newID in
-            if let device = camera.availableCameras.first(where: { $0.uniqueID == newID }) {
-              camera.selectCamera(device)
+      // Camera picker (only show if multiple cameras available)
+      if camera.availableCameras.count > 1 {
+        HStack {
+          Picker("Camera", selection: Binding(
+            get: { camera.selectedCamera?.uniqueID ?? "" },
+            set: { newID in
+              if let device = camera.availableCameras.first(where: { $0.uniqueID == newID }) {
+                camera.selectCamera(device)
+              }
+            }
+          )) {
+            ForEach(camera.availableCameras, id: \.uniqueID) { device in
+              Text(device.localizedName).tag(device.uniqueID)
             }
           }
-        )) {
-          ForEach(camera.availableCameras, id: \.uniqueID) { device in
-            Text(device.localizedName).tag(device.uniqueID)
-          }
-        }
-        .pickerStyle(.menu)
-        .frame(maxWidth: 300)
+          #if os(macOS)
+          .pickerStyle(.menu)
+          #endif
+          .frame(maxWidth: 300)
 
-        Spacer()
+          Spacer()
+        }
+        .padding(8)
+        .background(Color.black.opacity(0.8))
       }
-      .padding(8)
-      .background(Color.black.opacity(0.8))
 
       // Camera feed
       GeometryReader { geo in
         if let ciImage = camera.ciImage,
            let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
-
+          #if os(macOS)
           let nsSize = NSSize(width: ciImage.extent.width, height: ciImage.extent.height)
           let nsImage = NSImage(cgImage: cgImage, size: nsSize)
-
           Image(nsImage: nsImage)
             .resizable()
             .scaledToFit()
+          #else
+          let uiImage = UIImage(cgImage: cgImage)
+          Image(uiImage: uiImage)
+            .resizable()
+            .scaledToFit()
+          #endif
         } else {
           Color.black
         }
@@ -213,11 +227,7 @@ struct CameraView: View {
 struct JuliaSetCameraDemo: App {
   var body: some Scene {
     WindowGroup {
-      if #available(macOS 14.0, *) {
-        CameraView()
-      } else {
-        // break or do something?
-      }
+      CameraView()
     }
   }
 }

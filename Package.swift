@@ -6,7 +6,8 @@ import PackageDescription
 let package = Package(
     name: "CameraDemo",
     platforms: [
-        .macOS(.v13)  // Adjust if you need older macOS
+        .macOS(.v14),
+        .iOS(.v17)
     ],
     products: [
         .executable(name: "CameraDemo", targets: ["CameraDemo"])
@@ -19,13 +20,14 @@ let package = Package(
             name: "CameraDemo",
             dependencies: [],
             swiftSettings: [
-                .define("ENABLE_AVFOUNDATION")  // optional, just a flag
+                .define("ENABLE_AVFOUNDATION")
             ],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("CoreImage"),
-                .linkedFramework("Cocoa"),
                 .linkedFramework("SwiftUI"),
+                .linkedFramework("Cocoa", .when(platforms: [.macOS])),
+                .linkedFramework("UIKit", .when(platforms: [.iOS])),
             ]
         )
     ]
