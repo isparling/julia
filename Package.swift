@@ -37,6 +37,7 @@ let package = Package(
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("Cocoa", .when(platforms: [.macOS])),
                 .linkedFramework("UIKit", .when(platforms: [.iOS])),
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Info.plist"], .when(platforms: [.macOS])),
             ]
         ),
         .testTarget(
