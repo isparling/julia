@@ -12,6 +12,9 @@ This is a macOS SwiftUI application that generates Julia set visual effects by t
 # Build the project
 swift build
 
+# Recompile Metal shader (after editing JuliaWarp.ci.metal)
+make metallib
+
 # Run the application
 swift run CameraDemo
 
@@ -27,7 +30,8 @@ swift build -c release
 The project is split into two modules:
 
 ### JuliaKit (library, `Sources/JuliaKit/`)
-- **Filters/JuliaSetFilter**: CIWarpKernel-based z² transformation
+- **Filters/JuliaSetFilter**: CIWarpKernel-based z² transformation (Metal shader, half precision)
+- **Filters/JuliaWarp.ci.metal**: Metal warp kernel source (compiled to .metallib via Makefile)
 - **Camera/CameraManager**: AVFoundation video capture, processes frames through CoreImage filters
 - **Camera/PixelFormat**: Pixel format options enum
 

@@ -19,6 +19,12 @@ let package = Package(
         .target(
             name: "JuliaKit",
             path: "Sources/JuliaKit",
+            exclude: [
+                "Filters/JuliaWarp.ci.metal",
+            ],
+            resources: [
+                .copy("Filters/JuliaWarp.ci.metallib"),
+            ],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("CoreImage"),
