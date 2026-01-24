@@ -47,6 +47,23 @@ class JuliaSetFilter: CIFilter {
   }
 }
 
+// MARK: - Pixel Format Options
+enum PixelFormat: String, CaseIterable, Identifiable {
+  case ycbcr420 = "YCbCr 4:2:0"
+  case bgra = "BGRA (32-bit)"
+  case ycbcr420Video = "YCbCr 4:2:0 (Video Range)"
+
+  var id: String { rawValue }
+
+  var cvPixelFormat: OSType {
+    switch self {
+    case .ycbcr420: return kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+    case .bgra: return kCVPixelFormatType_32BGRA
+    case .ycbcr420Video: return kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+    }
+  }
+}
+
 // MARK: - Video Capture Manager
 @MainActor
 final class CameraManager: NSObject, ObservableObject {
@@ -54,12 +71,17 @@ final class CameraManager: NSObject, ObservableObject {
   @Published var ciImage: CIImage? = nil
   @Published var availableCameras: [AVCaptureDevice] = []
   @Published var selectedCamera: AVCaptureDevice?
+  @Published var pixelFormat: PixelFormat = .ycbcr420 {
+    didSet { reconfigureOutput() }
+  }
+  @Published var temperatureTintEnabled: Bool = false
 
   // MARK: Private
   private let session = AVCaptureSession()
   private let queue = DispatchQueue(label: "cameraQueue")
   private let ciContext = CIContext()
   private var currentInput: AVCaptureDeviceInput?
+  private var currentOutput: AVCaptureVideoDataOutput?
 
   // MARK: Init
   override init() {
@@ -131,13 +153,28 @@ final class CameraManager: NSObject, ObservableObject {
 
     let output = AVCaptureVideoDataOutput()
     output.videoSettings = [
-      kCVPixelBufferPixelFormatTypeKey as String:
-        kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+      kCVPixelBufferPixelFormatTypeKey as String: pixelFormat.cvPixelFormat
     ]
     output.setSampleBufferDelegate(self, queue: queue)
     if session.canAddOutput(output) { session.addOutput(output) }
+    currentOutput = output
 
     session.sessionPreset = .hd1920x1080
+  }
+
+  private func reconfigureOutput() {
+    session.beginConfiguration()
+    if let currentOutput = currentOutput {
+      session.removeOutput(currentOutput)
+    }
+    let output = AVCaptureVideoDataOutput()
+    output.videoSettings = [
+      kCVPixelBufferPixelFormatTypeKey as String: pixelFormat.cvPixelFormat
+    ]
+    output.setSampleBufferDelegate(self, queue: queue)
+    if session.canAddOutput(output) { session.addOutput(output) }
+    currentOutput = output
+    session.commitConfiguration()
   }
 }
 
@@ -156,9 +193,18 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     // Apply Julia set transformation
     let juliaFilter = JuliaSetFilter()
     juliaFilter.inputImage = inputImage
-    let finalImage = juliaFilter.outputImage ?? inputImage
+    let warpedImage = juliaFilter.outputImage ?? inputImage
     Task { @MainActor [weak self] in
-      self?.ciImage = finalImage
+      guard let self = self else { return }
+      if self.temperatureTintEnabled {
+        let tempFilter = CIFilter.temperatureAndTint()
+        tempFilter.inputImage = warpedImage
+        tempFilter.neutral = CIVector(x: 6500, y: 0)
+        tempFilter.targetNeutral = CIVector(x: 6500, y: 0)
+        self.ciImage = tempFilter.outputImage ?? warpedImage
+      } else {
+        self.ciImage = warpedImage
+      }
     }
   }
 }
@@ -170,9 +216,9 @@ struct CameraView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Camera picker (only show if multiple cameras available)
-      if camera.availableCameras.count > 1 {
-        HStack {
+      HStack {
+        // Camera picker (only show if multiple cameras available)
+        if camera.availableCameras.count > 1 {
           Picker("Camera", selection: Binding(
             get: { camera.selectedCamera?.uniqueID ?? "" },
             set: { newID in
@@ -189,12 +235,27 @@ struct CameraView: View {
           .pickerStyle(.menu)
           #endif
           .frame(maxWidth: 300)
-
-          Spacer()
         }
-        .padding(8)
-        .background(Color.black.opacity(0.8))
+
+        // Pixel format picker
+        Picker("Format", selection: $camera.pixelFormat) {
+          ForEach(PixelFormat.allCases) { format in
+            Text(format.rawValue).tag(format)
+          }
+        }
+        #if os(macOS)
+        .pickerStyle(.menu)
+        #endif
+        .frame(maxWidth: 220)
+
+        // Temperature/Tint filter toggle
+        Toggle("Neutral Tint", isOn: $camera.temperatureTintEnabled)
+          .frame(maxWidth: 150)
+
+        Spacer()
       }
+      .padding(8)
+      .background(Color.black.opacity(0.8))
 
       // Camera feed
       GeometryReader { geo in
@@ -225,6 +286,13 @@ struct CameraView: View {
 
 @main
 struct JuliaSetCameraDemo: App {
+  init() {
+    #if os(macOS)
+    NSApplication.shared.setActivationPolicy(.regular)
+    NSApplication.shared.activate(ignoringOtherApps: true)
+    #endif
+  }
+
   var body: some Scene {
     WindowGroup {
       CameraView()
