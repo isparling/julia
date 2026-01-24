@@ -3,12 +3,14 @@
 extern "C" {
   float2 juliaWarp(float2 outputExtent,
                    float2 sourceExtent,
+                   float2 center,
                    coreimage::destination dest) {
     half2 pos = half2(dest.coord());
 
-    // Normalize output position to -1..1
-    half2 outCenter = half2(outputExtent) / 2.0h;
-    half2 normalized = (pos - outCenter) / metal::min(outCenter.x, outCenter.y);
+    // Normalize output position relative to user-specified center
+    half2 outCenter = half2(center);
+    half normScale = metal::min(half(outputExtent.x), half(outputExtent.y)) / 2.0h;
+    half2 normalized = (pos - outCenter) / normScale;
 
     // z² in complex plane
     half x = normalized.x;

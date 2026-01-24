@@ -19,6 +19,9 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var upscaleFactor: UpscaleFactor = .none {
     didSet { _upscaleValue = upscaleFactor.scale }
   }
+  @Published public var center: CGPoint = CGPoint(x: 0.5, y: 0.5) {
+    didSet { _centerValue = center }
+  }
   @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
@@ -28,6 +31,7 @@ public final class CameraManager: NSObject, ObservableObject {
   private var currentInput: AVCaptureDeviceInput?
   private var currentOutput: AVCaptureVideoDataOutput?
   private nonisolated(unsafe) var _upscaleValue: CGFloat = 1.0
+  private nonisolated(unsafe) var _centerValue: CGPoint = CGPoint(x: 0.5, y: 0.5)
 
   // MARK: Init
   override public init() {
@@ -52,6 +56,10 @@ public final class CameraManager: NSObject, ObservableObject {
       position: position
     )
     availableCameras = discoverySession.devices
+    print("Discovered \(availableCameras.count) camera(s):")
+    for device in availableCameras {
+      print("  - \(device.localizedName) [\(device.deviceType)]")
+    }
     if selectedCamera == nil {
       selectedCamera = availableCameras.first
     }
@@ -150,6 +158,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     let juliaFilter = JuliaSetFilter()
     juliaFilter.inputImage = inputImage
     juliaFilter.scale = _upscaleValue
+    juliaFilter.center = _centerValue
     let warpedImage = juliaFilter.outputImage ?? inputImage
     Task { @MainActor [weak self] in
       guard let self = self else { return }

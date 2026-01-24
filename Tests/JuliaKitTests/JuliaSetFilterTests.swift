@@ -166,4 +166,53 @@ struct JuliaSetFilterTests {
     #expect(output.extent.width == 200)
     #expect(output.extent.height == 200)
   }
+
+  @Test("default center matches explicit (0.5, 0.5)")
+  func defaultCenterMatchesExplicit() throws {
+    let input = makeCheckerboard(width: 200, height: 200)
+
+    let filterDefault = JuliaSetFilter()
+    filterDefault.inputImage = input
+
+    let filterExplicit = JuliaSetFilter()
+    filterExplicit.inputImage = input
+    filterExplicit.center = CGPoint(x: 0.5, y: 0.5)
+
+    let out1 = try #require(filterDefault.outputImage)
+    let out2 = try #require(filterExplicit.outputImage)
+    let cg1 = try #require(render(out1))
+    let cg2 = try #require(render(out2))
+    let data1 = try #require(pixelData(of: cg1))
+    let data2 = try #require(pixelData(of: cg2))
+    #expect(data1 == data2)
+  }
+
+  @Test("offset center produces different output")
+  func offsetCenterProducesDifferentOutput() throws {
+    let input = makeCheckerboard(width: 200, height: 200)
+
+    let filterCenter = JuliaSetFilter()
+    filterCenter.inputImage = input
+
+    let filterOffset = JuliaSetFilter()
+    filterOffset.inputImage = input
+    filterOffset.center = CGPoint(x: 0.3, y: 0.7)
+
+    let out1 = try #require(filterCenter.outputImage)
+    let out2 = try #require(filterOffset.outputImage)
+    let cg1 = try #require(render(out1))
+    let cg2 = try #require(render(out2))
+    let data1 = try #require(pixelData(of: cg1))
+    let data2 = try #require(pixelData(of: cg2))
+    #expect(data1 != data2)
+  }
+
+  @Test("center at corner still produces output")
+  func centerAtCorner() throws {
+    let input = makeCheckerboard(width: 100, height: 100)
+    let filter = JuliaSetFilter()
+    filter.inputImage = input
+    filter.center = CGPoint(x: 0.0, y: 0.0)
+    #expect(filter.outputImage != nil)
+  }
 }
