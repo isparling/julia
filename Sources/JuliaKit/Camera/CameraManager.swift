@@ -143,16 +143,13 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
   ) {
     guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-    // Convert to CIImage, optionally upscaling for higher fractal detail
-    var inputImage = CIImage(cvPixelBuffer: pixelBuffer)
-    let scale = _upscaleValue
-    if scale > 1.0 {
-      inputImage = inputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-    }
+    // Convert to CIImage
+    let inputImage = CIImage(cvPixelBuffer: pixelBuffer)
 
-    // Apply Julia set transformation
+    // Apply Julia set transformation with optional supersampling
     let juliaFilter = JuliaSetFilter()
     juliaFilter.inputImage = inputImage
+    juliaFilter.scale = _upscaleValue
     let warpedImage = juliaFilter.outputImage ?? inputImage
     Task { @MainActor [weak self] in
       guard let self = self else { return }

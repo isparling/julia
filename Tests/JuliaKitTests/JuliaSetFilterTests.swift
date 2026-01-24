@@ -155,4 +155,15 @@ struct JuliaSetFilterTests {
     filter.inputImage = ciImage
     #expect(filter.outputImage != nil)
   }
+
+  @Test("upscale produces larger output extent")
+  func upscaleProducesLargerExtent() throws {
+    let input = makeCheckerboard(width: 100, height: 100)
+    let filter = JuliaSetFilter()
+    filter.inputImage = input
+    filter.scale = 2.0
+    let output = try #require(filter.outputImage)
+    #expect(output.extent.width == 200)
+    #expect(output.extent.height == 200)
+  }
 }

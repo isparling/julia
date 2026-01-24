@@ -7,8 +7,6 @@
     <string>JuliaSetCameraDemo needs access to your camera (OLD CAM)</string>
     
     <key>NSCameraUseContinuityCameraDeviceType</key>
-    <array>
-        <string>JuliaSetCameraDemo needs access to your camera (Continuity)</string>
-    </array>
+    <true/>
 </dict>
 </plist>
