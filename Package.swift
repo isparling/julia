@@ -7,7 +7,7 @@ let package = Package(
     name: "CameraDemo",
     platforms: [
         .macOS(.v14),
-        .iOS(.v17)
+        .iOS(.v17),
     ],
     products: [
         .executable(name: "CameraDemo", targets: ["CameraDemo"])
