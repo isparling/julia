@@ -1,8 +1,8 @@
 import CoreImage
 
 // MARK: - Julia Set Filter
-class JuliaSetFilter: CIFilter {
-  var inputImage: CIImage?
+public class JuliaSetFilter: CIFilter {
+  public var inputImage: CIImage?
 
   private static let kernel: CIWarpKernel? = {
     try? CIWarpKernel(source: """
@@ -27,7 +27,7 @@ class JuliaSetFilter: CIFilter {
       """)
   }()
 
-  override var outputImage: CIImage? {
+  override public var outputImage: CIImage? {
     guard let inputImage = inputImage,
           let kernel = Self.kernel else { return nil }
 

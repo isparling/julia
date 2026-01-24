@@ -16,19 +16,36 @@ let package = Package(
         // No external dependencies
     ],
     targets: [
+        .target(
+            name: "JuliaKit",
+            path: "Sources/JuliaKit",
+            linkerSettings: [
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("CoreImage"),
+                .linkedFramework("Cocoa", .when(platforms: [.macOS])),
+                .linkedFramework("UIKit", .when(platforms: [.iOS])),
+            ]
+        ),
         .executableTarget(
             name: "CameraDemo",
-            dependencies: [],
+            dependencies: ["JuliaKit"],
+            path: "Sources/CameraDemo",
             swiftSettings: [
                 .define("ENABLE_AVFOUNDATION")
             ],
             linkerSettings: [
-                .linkedFramework("AVFoundation"),
-                .linkedFramework("CoreImage"),
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("Cocoa", .when(platforms: [.macOS])),
                 .linkedFramework("UIKit", .when(platforms: [.iOS])),
             ]
-        )
+        ),
+        .executableTarget(
+            name: "JuliaKitTests",
+            dependencies: ["JuliaKit"],
+            path: "Tests/JuliaKitTests",
+            linkerSettings: [
+                .linkedFramework("CoreImage"),
+            ]
+        ),
     ]
 )

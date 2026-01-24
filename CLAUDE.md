@@ -15,22 +15,33 @@ swift build
 # Run the application
 swift run CameraDemo
 
+# Run tests (headless, no camera needed)
+swift run JuliaKitTests
+
 # Build for release
 swift build -c release
 ```
 
 ## Architecture
 
-The app is a single-file SwiftUI application (`Sources/main.swift`) with these components:
+The project is split into two modules:
 
-- **CameraManager**: Captures video from the webcam using AVFoundation, processes frames through CoreImage filters, and publishes CIImage frames to SwiftUI
-- **CameraView**: Renders the processed frames using SwiftUI
-- **JuliaSetCameraDemo**: App entry point
+### JuliaKit (library, `Sources/JuliaKit/`)
+- **Filters/JuliaSetFilter**: CIWarpKernel-based z² transformation
+- **Camera/CameraManager**: AVFoundation video capture, processes frames through CoreImage filters
+- **Camera/PixelFormat**: Pixel format options enum
 
-The Julia set transformation (described in README.md) maps each pixel coordinate (x,y) to a new lookup position using z² in the complex plane: `(x² - y², 2xy)`. This lookup determines where to sample the original image for each output pixel.
+### CameraDemo (executable, `Sources/CameraDemo/`)
+- **Views/CameraView**: Renders processed frames using SwiftUI
+- **App/JuliaSetCameraDemo**: App entry point
+
+### Tests (`Tests/JuliaKitTests/`)
+Standalone executable that verifies the filter pipeline with synthetic images (checkerboard patterns, solid colors, CVPixelBuffers) rendered via CPU-only CIContext. No camera or display needed.
+
+The Julia set transformation maps each pixel coordinate (x,y) to a new lookup position using z² in the complex plane: `(x² - y², 2xy)`. This lookup determines where to sample the original image for each output pixel.
 
 ## Requirements
 
-- macOS 13+ (Package.swift), but CameraView requires macOS 14+
+- macOS 14+
 - Swift 6.1+
 - Camera access permission (configured in Info.plist)

@@ -5,15 +5,15 @@ import SwiftUI
 
 // MARK: - Video Capture Manager
 @MainActor
-final class CameraManager: NSObject, ObservableObject {
+public final class CameraManager: NSObject, ObservableObject {
   // MARK: Public
-  @Published var ciImage: CIImage? = nil
-  @Published var availableCameras: [AVCaptureDevice] = []
-  @Published var selectedCamera: AVCaptureDevice?
-  @Published var pixelFormat: PixelFormat = .ycbcr420 {
+  @Published public var ciImage: CIImage? = nil
+  @Published public var availableCameras: [AVCaptureDevice] = []
+  @Published public var selectedCamera: AVCaptureDevice?
+  @Published public var pixelFormat: PixelFormat = .ycbcr420 {
     didSet { reconfigureOutput() }
   }
-  @Published var temperatureTintEnabled: Bool = false
+  @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
   private let session = AVCaptureSession()
@@ -23,14 +23,14 @@ final class CameraManager: NSObject, ObservableObject {
   private var currentOutput: AVCaptureVideoDataOutput?
 
   // MARK: Init
-  override init() {
+  override public init() {
     super.init()
     refreshCameraList()
     setupSession()
     session.startRunning()
   }
 
-  func refreshCameraList() {
+  public func refreshCameraList() {
     #if os(macOS)
     let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .continuityCamera, .external]
     let position: AVCaptureDevice.Position = .unspecified
@@ -50,7 +50,7 @@ final class CameraManager: NSObject, ObservableObject {
     }
   }
 
-  func selectCamera(_ device: AVCaptureDevice) {
+  public func selectCamera(_ device: AVCaptureDevice) {
     guard device.uniqueID != selectedCamera?.uniqueID else { return }
     selectedCamera = device
 
@@ -119,7 +119,7 @@ final class CameraManager: NSObject, ObservableObject {
 
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
 extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
-  nonisolated func captureOutput(
+  nonisolated public func captureOutput(
     _ output: AVCaptureOutput,
     didOutput sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection

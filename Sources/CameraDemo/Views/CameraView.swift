@@ -1,4 +1,5 @@
 import CoreImage
+import JuliaKit
 import SwiftUI
 
 // MARK: - SwiftUI View
