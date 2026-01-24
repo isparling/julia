@@ -41,6 +41,28 @@ struct CameraView: View {
         #endif
         .frame(maxWidth: 220)
 
+        // Resolution picker
+        Picker("Resolution", selection: $camera.captureResolution) {
+          ForEach(CaptureResolution.allCases) { res in
+            Text(res.rawValue).tag(res)
+          }
+        }
+        #if os(macOS)
+        .pickerStyle(.menu)
+        #endif
+        .frame(maxWidth: 150)
+
+        // Upscale picker
+        Picker("Upscale", selection: $camera.upscaleFactor) {
+          ForEach(UpscaleFactor.allCases) { factor in
+            Text(factor.rawValue).tag(factor)
+          }
+        }
+        #if os(macOS)
+        .pickerStyle(.menu)
+        #endif
+        .frame(maxWidth: 150)
+
         // Temperature/Tint filter toggle
         Toggle("Neutral Tint", isOn: $camera.temperatureTintEnabled)
           .frame(maxWidth: 150)

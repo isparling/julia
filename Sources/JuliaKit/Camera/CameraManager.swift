@@ -13,6 +13,12 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var pixelFormat: PixelFormat = .ycbcr420 {
     didSet { reconfigureOutput() }
   }
+  @Published public var captureResolution: CaptureResolution = .hd1080 {
+    didSet { applyResolution() }
+  }
+  @Published public var upscaleFactor: UpscaleFactor = .none {
+    didSet { _upscaleValue = upscaleFactor.scale }
+  }
   @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
@@ -21,6 +27,7 @@ public final class CameraManager: NSObject, ObservableObject {
   private let ciContext = CIContext()
   private var currentInput: AVCaptureDeviceInput?
   private var currentOutput: AVCaptureVideoDataOutput?
+  private nonisolated(unsafe) var _upscaleValue: CGFloat = 1.0
 
   // MARK: Init
   override public init() {
@@ -98,7 +105,17 @@ public final class CameraManager: NSObject, ObservableObject {
     if session.canAddOutput(output) { session.addOutput(output) }
     currentOutput = output
 
-    session.sessionPreset = .hd1920x1080
+    if session.canSetSessionPreset(captureResolution.sessionPreset) {
+      session.sessionPreset = captureResolution.sessionPreset
+    }
+  }
+
+  private func applyResolution() {
+    session.beginConfiguration()
+    if session.canSetSessionPreset(captureResolution.sessionPreset) {
+      session.sessionPreset = captureResolution.sessionPreset
+    }
+    session.commitConfiguration()
   }
 
   private func reconfigureOutput() {
@@ -126,8 +143,12 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
   ) {
     guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-    // Convert to CIImage
-    let inputImage = CIImage(cvPixelBuffer: pixelBuffer)
+    // Convert to CIImage, optionally upscaling for higher fractal detail
+    var inputImage = CIImage(cvPixelBuffer: pixelBuffer)
+    let scale = _upscaleValue
+    if scale > 1.0 {
+      inputImage = inputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+    }
 
     // Apply Julia set transformation
     let juliaFilter = JuliaSetFilter()
