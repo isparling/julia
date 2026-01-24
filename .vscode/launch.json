@@ -19,6 +19,26 @@
       "target": "CameraDemo",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release CameraDemo"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:julia}",
+      "name": "Debug JuliaKitTests",
+      "target": "JuliaKitTests",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug JuliaKitTests"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:julia}",
+      "name": "Release JuliaKitTests",
+      "target": "JuliaKitTests",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release JuliaKitTests"
     }
   ]
 }
