@@ -13,7 +13,7 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var pixelFormat: PixelFormat = .ycbcr420 {
     didSet { reconfigureOutput() }
   }
-  @Published public var captureResolution: CaptureResolution = .hd1080 {
+  @Published public var captureResolution: CaptureResolution = .uhd4K {
     didSet { applyResolution() }
   }
   @Published public var upscaleFactor: UpscaleFactor = .none {
