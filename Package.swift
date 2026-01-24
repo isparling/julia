@@ -39,7 +39,7 @@ let package = Package(
                 .linkedFramework("UIKit", .when(platforms: [.iOS])),
             ]
         ),
-        .executableTarget(
+        .testTarget(
             name: "JuliaKitTests",
             dependencies: ["JuliaKit"],
             path: "Tests/JuliaKitTests",

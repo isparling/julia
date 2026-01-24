@@ -1,35 +1,7 @@
 import CoreImage
 import Foundation
 import JuliaKit
-
-// MARK: - Test Harness
-
-@MainActor
-final class TestContext {
-  static let shared = TestContext()
-  var passed = 0
-  var failed = 0
-
-  func test(_ name: String, _ body: () -> Void) {
-    print("  \(name)...", terminator: " ")
-    body()
-  }
-
-  func pass() {
-    passed += 1
-    print("PASS")
-  }
-
-  func fail(_ message: String = "") {
-    failed += 1
-    let suffix = message.isEmpty ? "" : " (\(message))"
-    print("FAIL\(suffix)")
-  }
-
-  func expect(_ condition: Bool, _ message: String = "") {
-    if condition { pass() } else { fail(message) }
-  }
-}
+import Testing
 
 // MARK: - Test Utilities
 
@@ -86,107 +58,101 @@ private func pixelColor(of cgImage: CGImage, at point: (x: Int, y: Int)) -> (r: 
 
 // MARK: - Tests
 
-@main
-struct TestRunner {
-  @MainActor
-  static func main() {
-    let ctx = TestContext.shared
-    print("JuliaSetFilter Tests")
-    print("====================")
+@Suite("JuliaSetFilter")
+struct JuliaSetFilterTests {
 
-    ctx.test("output not nil for valid input") {
-      let filter = JuliaSetFilter()
-      filter.inputImage = makeCheckerboard()
-      ctx.expect(filter.outputImage != nil, "outputImage was nil")
+  @Test("output not nil for valid input")
+  func outputNotNil() {
+    let filter = JuliaSetFilter()
+    filter.inputImage = makeCheckerboard()
+    #expect(filter.outputImage != nil)
+  }
+
+  @Test("output extent matches input")
+  func outputExtentMatchesInput() {
+    let input = makeCheckerboard(width: 1920, height: 1080)
+    let filter = JuliaSetFilter()
+    filter.inputImage = input
+    let output = try! #require(filter.outputImage)
+    #expect(output.extent == input.extent)
+  }
+
+  @Test("nil input produces nil output")
+  func nilInputProducesNilOutput() {
+    let filter = JuliaSetFilter()
+    #expect(filter.outputImage == nil)
+  }
+
+  @Test("transformation alters pixels")
+  func transformationAltersPixels() throws {
+    let input = makeCheckerboard()
+    let filter = JuliaSetFilter()
+    filter.inputImage = input
+    let output = try #require(filter.outputImage)
+    let inputCG = try #require(render(input))
+    let outputCG = try #require(render(output))
+    let inputData = try #require(pixelData(of: inputCG))
+    let outputData = try #require(pixelData(of: outputCG))
+    #expect(inputData != outputData)
+  }
+
+  @Test("center pixel maps to center (z²(0,0) = (0,0))")
+  func centerPixelMapsToCenter() throws {
+    let width = 100
+    let height = 100
+    let centerX = width / 2
+    let centerY = height / 2
+
+    let redImage = makeSolidColor(CIColor(red: 1, green: 0, blue: 0), width: width, height: height)
+    let filter = JuliaSetFilter()
+    filter.inputImage = redImage
+    let output = try #require(filter.outputImage)
+    let outputCG = try #require(render(output))
+    let color = try #require(pixelColor(of: outputCG, at: (x: centerX, y: centerY)))
+    #expect(color.r > 200 && color.g < 50 && color.b < 50)
+  }
+
+  @Test("deterministic output")
+  func deterministicOutput() throws {
+    let input = makeCheckerboard(width: 200, height: 200)
+
+    let filter1 = JuliaSetFilter()
+    filter1.inputImage = input
+    let filter2 = JuliaSetFilter()
+    filter2.inputImage = input
+
+    let out1 = try #require(filter1.outputImage)
+    let out2 = try #require(filter2.outputImage)
+    let cg1 = try #require(render(out1))
+    let cg2 = try #require(render(out2))
+    let data1 = try #require(pixelData(of: cg1))
+    let data2 = try #require(pixelData(of: cg2))
+    #expect(data1 == data2)
+  }
+
+  @Test("processes CVPixelBuffer (BGRA)")
+  func processesCVPixelBuffer() throws {
+    let width = 100
+    let height = 100
+    var pixelBuffer: CVPixelBuffer?
+    let status = CVPixelBufferCreate(
+      kCFAllocatorDefault,
+      width, height,
+      kCVPixelFormatType_32BGRA,
+      [kCVPixelBufferWidthKey: width, kCVPixelBufferHeightKey: height] as CFDictionary,
+      &pixelBuffer
+    )
+    let buffer = try #require(status == kCVReturnSuccess ? pixelBuffer : nil)
+
+    CVPixelBufferLockBaseAddress(buffer, [])
+    if let base = CVPixelBufferGetBaseAddress(buffer) {
+      memset(base, 128, CVPixelBufferGetDataSize(buffer))
     }
+    CVPixelBufferUnlockBaseAddress(buffer, [])
 
-    ctx.test("output extent matches input") {
-      let input = makeCheckerboard(width: 1920, height: 1080)
-      let filter = JuliaSetFilter()
-      filter.inputImage = input
-      guard let output = filter.outputImage else { ctx.fail("output was nil"); return }
-      ctx.expect(output.extent == input.extent, "extent mismatch: \(output.extent) != \(input.extent)")
-    }
-
-    ctx.test("nil input produces nil output") {
-      let filter = JuliaSetFilter()
-      ctx.expect(filter.outputImage == nil, "expected nil output")
-    }
-
-    ctx.test("transformation alters pixels") {
-      let input = makeCheckerboard()
-      let filter = JuliaSetFilter()
-      filter.inputImage = input
-      guard let output = filter.outputImage else { ctx.fail("output was nil"); return }
-      guard let inputCG = render(input),
-            let outputCG = render(output) else { ctx.fail("render failed"); return }
-      guard let inputData = pixelData(of: inputCG),
-            let outputData = pixelData(of: outputCG) else { ctx.fail("pixel extraction failed"); return }
-      ctx.expect(inputData != outputData, "output pixels identical to input")
-    }
-
-    ctx.test("center pixel maps to center (z²(0,0) = (0,0))") {
-      let width = 100
-      let height = 100
-      let centerX = width / 2
-      let centerY = height / 2
-
-      let redImage = makeSolidColor(CIColor(red: 1, green: 0, blue: 0), width: width, height: height)
-      let filter = JuliaSetFilter()
-      filter.inputImage = redImage
-      guard let output = filter.outputImage,
-            let outputCG = render(output) else { ctx.fail("render failed"); return }
-      guard let color = pixelColor(of: outputCG, at: (x: centerX, y: centerY)) else { ctx.fail("pixel read failed"); return }
-      ctx.expect(color.r > 200 && color.g < 50 && color.b < 50,
-                 "center RGBA=(\(color.r),\(color.g),\(color.b),\(color.a))")
-    }
-
-    ctx.test("deterministic output") {
-      let input = makeCheckerboard(width: 200, height: 200)
-
-      let filter1 = JuliaSetFilter()
-      filter1.inputImage = input
-      let filter2 = JuliaSetFilter()
-      filter2.inputImage = input
-
-      guard let out1 = filter1.outputImage, let out2 = filter2.outputImage,
-            let cg1 = render(out1), let cg2 = render(out2),
-            let data1 = pixelData(of: cg1), let data2 = pixelData(of: cg2)
-      else { ctx.fail("render failed"); return }
-      ctx.expect(data1 == data2, "outputs differ between two applications")
-    }
-
-    ctx.test("processes CVPixelBuffer (BGRA)") {
-      let width = 100
-      let height = 100
-      var pixelBuffer: CVPixelBuffer?
-      let status = CVPixelBufferCreate(
-        kCFAllocatorDefault,
-        width, height,
-        kCVPixelFormatType_32BGRA,
-        [kCVPixelBufferWidthKey: width, kCVPixelBufferHeightKey: height] as CFDictionary,
-        &pixelBuffer
-      )
-      guard status == kCVReturnSuccess, let buffer = pixelBuffer else { ctx.fail("CVPixelBuffer creation failed"); return }
-
-      CVPixelBufferLockBaseAddress(buffer, [])
-      if let base = CVPixelBufferGetBaseAddress(buffer) {
-        memset(base, 128, CVPixelBufferGetDataSize(buffer))
-      }
-      CVPixelBufferUnlockBaseAddress(buffer, [])
-
-      let ciImage = CIImage(cvPixelBuffer: buffer)
-      let filter = JuliaSetFilter()
-      filter.inputImage = ciImage
-      ctx.expect(filter.outputImage != nil, "filter returned nil for CVPixelBuffer input")
-    }
-
-    // Summary
-    print("--------------------")
-    print("\(ctx.passed + ctx.failed) tests: \(ctx.passed) passed, \(ctx.failed) failed")
-
-    if ctx.failed > 0 {
-      exit(1)
-    }
+    let ciImage = CIImage(cvPixelBuffer: buffer)
+    let filter = JuliaSetFilter()
+    filter.inputImage = ciImage
+    #expect(filter.outputImage != nil)
   }
 }

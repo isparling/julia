@@ -16,7 +16,7 @@ swift build
 swift run CameraDemo
 
 # Run tests (headless, no camera needed)
-swift run JuliaKitTests
+swift test
 
 # Build for release
 swift build -c release
@@ -36,7 +36,7 @@ The project is split into two modules:
 - **App/JuliaSetCameraDemo**: App entry point
 
 ### Tests (`Tests/JuliaKitTests/`)
-Standalone executable that verifies the filter pipeline with synthetic images (checkerboard patterns, solid colors, CVPixelBuffers) rendered via CPU-only CIContext. No camera or display needed.
+Swift Testing suite that verifies the filter pipeline with synthetic images (checkerboard patterns, solid colors, CVPixelBuffers) rendered via CPU-only CIContext. No camera or display needed.
 
 The Julia set transformation maps each pixel coordinate (x,y) to a new lookup position using z² in the complex plane: `(x² - y², 2xy)`. This lookup determines where to sample the original image for each output pixel.
 
