@@ -21,9 +21,11 @@ let package = Package(
             path: "Sources/JuliaKit",
             exclude: [
                 "Filters/JuliaWarp.ci.metal",
+                "Filters/ChromaticAberration.ci.metal",
             ],
             resources: [
                 .copy("Filters/JuliaWarp.ci.metallib"),
+                .copy("Filters/ChromaticAberration.ci.metallib"),
             ],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),

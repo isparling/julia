@@ -5,6 +5,7 @@ public class JuliaSetFilter: CIFilter {
   public var inputImage: CIImage?
   public var scale: CGFloat = 1.0
   public var center: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  public var warpFunction: WarpFunction = .z2
 
   private static let kernel: CIWarpKernel? = {
     guard let url = Bundle.module.url(forResource: "JuliaWarp.ci", withExtension: "metallib"),
@@ -33,6 +34,7 @@ public class JuliaSetFilter: CIFilter {
         CIVector(x: outputExtent.width, y: outputExtent.height),
         CIVector(x: sourceExtent.width, y: sourceExtent.height),
         centerPixel,
+        warpFunction.kernelValue,
       ]
     )
   }

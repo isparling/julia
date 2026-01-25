@@ -67,6 +67,21 @@ struct CameraView: View {
         #endif
         .frame(maxWidth: 150)
 
+        // Warp function picker
+        Picker("Function", selection: $camera.warpFunction) {
+          ForEach(WarpFunction.allCases) { fn in
+            Text(fn.rawValue).tag(fn)
+          }
+        }
+        #if os(macOS)
+          .pickerStyle(.menu)
+        #endif
+        .frame(maxWidth: 100)
+
+        // Chromatic aberration toggle
+        Toggle("Chromatic", isOn: $camera.chromaticAberrationEnabled)
+          .frame(maxWidth: 120)
+
         // Temperature/Tint filter toggle
         Toggle("Neutral Tint", isOn: $camera.temperatureTintEnabled)
           .frame(maxWidth: 150)

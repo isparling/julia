@@ -22,6 +22,12 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var center: CGPoint = CGPoint(x: 0.5, y: 0.5) {
     didSet { _centerValue = center }
   }
+  @Published public var warpFunction: WarpFunction = .z2 {
+    didSet { _warpFunctionValue = warpFunction }
+  }
+  @Published public var chromaticAberrationEnabled: Bool = false {
+    didSet { _chromaEnabled = chromaticAberrationEnabled }
+  }
   @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
@@ -32,6 +38,8 @@ public final class CameraManager: NSObject, ObservableObject {
   private var currentOutput: AVCaptureVideoDataOutput?
   private nonisolated(unsafe) var _upscaleValue: CGFloat = 1.0
   private nonisolated(unsafe) var _centerValue: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  private nonisolated(unsafe) var _warpFunctionValue: WarpFunction = .z2
+  private nonisolated(unsafe) var _chromaEnabled: Bool = false
 
   // MARK: Init
   override public init() {
@@ -159,17 +167,26 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     juliaFilter.inputImage = inputImage
     juliaFilter.scale = _upscaleValue
     juliaFilter.center = _centerValue
-    let warpedImage = juliaFilter.outputImage ?? inputImage
+    juliaFilter.warpFunction = _warpFunctionValue
+    var processedImage = juliaFilter.outputImage ?? inputImage
+
+    // Apply chromatic aberration if enabled
+    if _chromaEnabled {
+      let chromaFilter = ChromaticAberrationFilter()
+      chromaFilter.inputImage = processedImage
+      processedImage = chromaFilter.outputImage ?? processedImage
+    }
+
     Task { @MainActor [weak self] in
       guard let self = self else { return }
       if self.temperatureTintEnabled {
         let tempFilter = CIFilter.temperatureAndTint()
-        tempFilter.inputImage = warpedImage
+        tempFilter.inputImage = processedImage
         tempFilter.neutral = CIVector(x: 6500, y: 0)
         tempFilter.targetNeutral = CIVector(x: 6500, y: 0)
-        self.ciImage = tempFilter.outputImage ?? warpedImage
+        self.ciImage = tempFilter.outputImage ?? processedImage
       } else {
-        self.ciImage = warpedImage
+        self.ciImage = processedImage
       }
     }
   }
