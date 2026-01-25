@@ -1,7 +1,7 @@
 ### julia sets
-this project is is a demo of generating julia sets via visual recursion.
+This project is is a demo of generating julia sets via visual recursion; an implementation of the paper titled `JuliaReprintAuthorCopy.pdf`.
 
-it takes a video feed from your webcam and provides transforms every frame before rendering it to the screen.
+It takes a video feed from your webcam and provides transforms every frame before rendering it to the screen.
 
 the transformation is a simple julia set transformation, z^2 in the complex plane.
 
