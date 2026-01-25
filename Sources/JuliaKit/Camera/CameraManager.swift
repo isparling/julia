@@ -28,6 +28,9 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var chromaticAberrationEnabled: Bool = false {
     didSet { _chromaEnabled = chromaticAberrationEnabled }
   }
+  @Published public var antialiasingMode: AntialiasingMode = .none {
+    didSet { _aaMode = antialiasingMode }
+  }
   @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
@@ -40,6 +43,7 @@ public final class CameraManager: NSObject, ObservableObject {
   private nonisolated(unsafe) var _centerValue: CGPoint = CGPoint(x: 0.5, y: 0.5)
   private nonisolated(unsafe) var _warpFunctionValue: WarpFunction = .z2
   private nonisolated(unsafe) var _chromaEnabled: Bool = false
+  private nonisolated(unsafe) var _aaMode: AntialiasingMode = .none
 
   // MARK: Init
   override public init() {
@@ -168,6 +172,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     juliaFilter.scale = _upscaleValue
     juliaFilter.center = _centerValue
     juliaFilter.warpFunction = _warpFunctionValue
+    juliaFilter.antialiasingMode = _aaMode
     var processedImage = juliaFilter.outputImage ?? inputImage
 
     // Apply chromatic aberration if enabled

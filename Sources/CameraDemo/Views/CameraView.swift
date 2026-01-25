@@ -78,6 +78,17 @@ struct CameraView: View {
         #endif
         .frame(maxWidth: 100)
 
+        // Antialiasing mode picker
+        Picker("AA", selection: $camera.antialiasingMode) {
+          ForEach(AntialiasingMode.allCases) { mode in
+            Text(mode.rawValue).tag(mode)
+          }
+        }
+        #if os(macOS)
+          .pickerStyle(.menu)
+        #endif
+        .frame(maxWidth: 100)
+
         // Chromatic aberration toggle
         Toggle("Chromatic", isOn: $camera.chromaticAberrationEnabled)
           .frame(maxWidth: 120)
