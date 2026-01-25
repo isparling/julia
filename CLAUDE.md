@@ -49,3 +49,6 @@ The Julia set transformation maps each pixel coordinate (x,y) to a new lookup po
 - macOS 14+
 - Swift 6.1+
 - Camera access permission (configured in Info.plist)
+
+## Interaction patterns
+Since validating the quality of an implementation requires human user to run the application and make an aesthetic judgment, when proposing implementation fixes **ALWAYS** include an option to implement all suggestions, toggleable via a menu.
