@@ -28,7 +28,7 @@ public final class CameraManager: NSObject, ObservableObject {
   @Published public var chromaticAberrationEnabled: Bool = false {
     didSet { _chromaEnabled = chromaticAberrationEnabled }
   }
-  @Published public var antialiasingMode: AntialiasingMode = .none {
+  @Published public var antialiasingMode: AntialiasingMode = .adaptive {
     didSet { _aaMode = antialiasingMode }
   }
   @Published public var temperatureTintEnabled: Bool = false
@@ -43,7 +43,7 @@ public final class CameraManager: NSObject, ObservableObject {
   private nonisolated(unsafe) var _centerValue: CGPoint = CGPoint(x: 0.5, y: 0.5)
   private nonisolated(unsafe) var _warpFunctionValue: WarpFunction = .z2
   private nonisolated(unsafe) var _chromaEnabled: Bool = false
-  private nonisolated(unsafe) var _aaMode: AntialiasingMode = .none
+  private nonisolated(unsafe) var _aaMode: AntialiasingMode = .adaptive
 
   // MARK: Init
   override public init() {
