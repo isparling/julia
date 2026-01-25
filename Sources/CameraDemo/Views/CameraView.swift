@@ -89,6 +89,16 @@ struct CameraView: View {
         #endif
         .frame(maxWidth: 100)
 
+        // Zoom level slider (crops black border)
+        HStack(spacing: 4) {
+          Text("Zoom")
+          Slider(value: $camera.zoomLevel, in: 1.0...1.3, step: 0.01)
+            .frame(width: 80)
+          Text(String(format: "%.0f%%", (camera.zoomLevel - 1) * 100))
+            .frame(width: 30)
+        }
+        .frame(maxWidth: 160)
+
         // Chromatic aberration toggle
         Toggle("Chromatic", isOn: $camera.chromaticAberrationEnabled)
           .frame(maxWidth: 120)

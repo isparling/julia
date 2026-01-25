@@ -7,6 +7,7 @@ public class JuliaSetFilter: CIFilter {
   public var center: CGPoint = CGPoint(x: 0.5, y: 0.5)
   public var warpFunction: WarpFunction = .z2
   public var antialiasingMode: AntialiasingMode = .adaptive
+  public var zoomLevel: CGFloat = 1.0  // 1.0 = no crop, >1.0 = crop inward
 
   private static let kernel: CIWarpKernel? = {
     guard let url = Bundle.module.url(forResource: "JuliaWarp.ci", withExtension: "metallib"),
@@ -27,7 +28,7 @@ public class JuliaSetFilter: CIFilter {
       x: outputExtent.width * center.x,
       y: outputExtent.height * center.y
     )
-    return kernel.apply(
+    guard var result = kernel.apply(
       extent: outputExtent,
       roiCallback: { _, _ in sourceExtent },
       image: inputImage,
@@ -38,6 +39,18 @@ public class JuliaSetFilter: CIFilter {
         warpFunction.kernelValue,
         antialiasingMode.kernelValue,
       ]
-    )
+    ) else { return nil }
+
+    // Apply zoom by cropping inward to remove black border
+    if zoomLevel > 1.0 {
+      let cropInset = (zoomLevel - 1.0) / zoomLevel / 2.0
+      let cropRect = result.extent.insetBy(
+        dx: result.extent.width * cropInset,
+        dy: result.extent.height * cropInset
+      )
+      result = result.cropped(to: cropRect)
+    }
+
+    return result
   }
 }
