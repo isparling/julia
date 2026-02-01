@@ -13,16 +13,50 @@ for every frame:
 
 ### running the app
 
+**For end users (double-click .app):**
+
 ```bash
-# build and run
+# Build distributable .app bundle
+make app
+
+# Launch the app
+open .build/arm64-apple-macosx/release/JuliaSetCamera.app
+
+# Install to /Applications
+make install
+```
+
+**For developers (CLI):**
+
+```bash
+# Quick testing during development
 swift run CameraDemo
 
-# or build for release
+# Build release binary
 swift build -c release
-.build/release/CameraDemo
+.build/arm64-apple-macosx/release/CameraDemo
 ```
 
 the app will request camera access on first launch. grant permission when prompted.
+
+### build commands
+
+```bash
+# Compile Metal shaders (after editing .metal files)
+make metallib
+
+# Build .app bundle
+make app
+
+# Install to /Applications
+make install
+
+# Clean app bundle artifacts
+make clean-app
+
+# Run tests (headless, no camera needed)
+swift test
+```
 
 ### using your iphone as a camera
 

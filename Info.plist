@@ -3,9 +3,39 @@
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.isaacsparling.juliaset</string>
+
+    <key>CFBundleName</key>
+    <string>JuliaSet</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>Julia Set Camera</string>
+
+    <key>CFBundleExecutable</key>
+    <string>CameraDemo</string>
+
+    <key>CFBundleVersion</key>
+    <string>__BUILD_NUMBER__</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>__VERSION__</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
     <key>NSCameraUsageDescription</key>
-    <string>JuliaSetCameraDemo needs access to your camera (OLD CAM)</string>
-    
+    <string>Julia Set Camera uses your camera to create real-time fractal transformations of the video feed.</string>
+
     <key>NSCameraUseContinuityCameraDeviceType</key>
     <true/>
 </dict>
