@@ -2,6 +2,8 @@ import AVFoundation
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
+import Metal
+import Foundation
 
 // MARK: - Video Capture Manager
 @MainActor
@@ -17,44 +19,104 @@ public final class CameraManager: NSObject, ObservableObject {
     didSet { applyResolution() }
   }
   @Published public var upscaleFactor: UpscaleFactor = .none {
-    didSet { _upscaleValue = upscaleFactor.scale }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.upscale = upscaleFactor.scale
+      filterParamsLock.unlock()
+    }
   }
   @Published public var center: CGPoint = CGPoint(x: 0.5, y: 0.5) {
-    didSet { _centerValue = center }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.center = center
+      filterParamsLock.unlock()
+    }
   }
   @Published public var warpFunction: WarpFunction = .z2 {
-    didSet { _warpFunctionValue = warpFunction }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.warpFunction = warpFunction
+      filterParamsLock.unlock()
+    }
   }
   @Published public var chromaticAberrationEnabled: Bool = false {
-    didSet { _chromaEnabled = chromaticAberrationEnabled }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.chromaEnabled = chromaticAberrationEnabled
+      filterParamsLock.unlock()
+    }
   }
   @Published public var antialiasingMode: AntialiasingMode = .adaptive {
-    didSet { _aaMode = antialiasingMode }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.aaMode = antialiasingMode
+      filterParamsLock.unlock()
+    }
   }
   @Published public var zoomLevel: CGFloat = 1.0 {
-    didSet { _zoomValue = zoomLevel }
+    didSet {
+      filterParamsLock.lock()
+      filterParams.zoom = zoomLevel
+      filterParamsLock.unlock()
+    }
   }
   @Published public var temperatureTintEnabled: Bool = false
 
   // MARK: Private
   private let session = AVCaptureSession()
   private let queue = DispatchQueue(label: "cameraQueue")
-  private let ciContext = CIContext()
   private var currentInput: AVCaptureDeviceInput?
   private var currentOutput: AVCaptureVideoDataOutput?
-  private nonisolated(unsafe) var _upscaleValue: CGFloat = 1.0
-  private nonisolated(unsafe) var _centerValue: CGPoint = CGPoint(x: 0.5, y: 0.5)
-  private nonisolated(unsafe) var _warpFunctionValue: WarpFunction = .z2
-  private nonisolated(unsafe) var _chromaEnabled: Bool = false
-  private nonisolated(unsafe) var _aaMode: AntialiasingMode = .adaptive
-  private nonisolated(unsafe) var _zoomValue: CGFloat = 1.0
+
+  // Thread-safe filter parameters using NSLock
+  // Note: filterParams is protected by filterParamsLock, so nonisolated(unsafe) is safe here
+  private struct FilterParams {
+    var upscale: CGFloat = 1.0
+    var center: CGPoint = CGPoint(x: 0.5, y: 0.5)
+    var warpFunction: WarpFunction = .z2
+    var chromaEnabled: Bool = false
+    var aaMode: AntialiasingMode = .adaptive
+    var zoom: CGFloat = 1.0
+  }
+  private nonisolated(unsafe) var filterParams = FilterParams()
+  private let filterParamsLock = NSLock()
 
   // MARK: Init
   override public init() {
     super.init()
+    logSystemInfo()
     refreshCameraList()
     setupSession()
     session.startRunning()
+  }
+
+  private func logSystemInfo() {
+    print("=== CAMERA MANAGER INIT ===")
+
+    // macOS version - CRITICAL for Tahoe 26.x debugging
+    let version = ProcessInfo.processInfo.operatingSystemVersion
+    print("macOS Version: \(version.majorVersion).\(version.minorVersion).\(version.patchVersion)")
+
+    #if arch(arm64)
+    print("Architecture: Apple Silicon (ARM64)")
+    #elseif arch(x86_64)
+    print("Architecture: Intel (x86_64)")
+    #else
+    print("Architecture: Unknown")
+    #endif
+
+    if let device = MTLCreateSystemDefaultDevice() {
+      print("Metal Device: \(device.name)")
+      print("Metal GPU Family: \(device.supportsFamily(.apple7) ? "Apple7+" : "Older")")
+    } else {
+      print("⚠️ WARNING: No Metal device found")
+    }
+
+    // Test CIContext creation - may fail on Tahoe 26.x with strict thread checks
+    let context = CIContext()
+    print("CIContext created successfully: \(context)")
+
+    print("===========================")
   }
 
   public func refreshCameraList() {
@@ -165,26 +227,77 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     didOutput sampleBuffer: CMSampleBuffer,
     from connection: AVCaptureConnection
   ) {
-    guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+    // Log first frame details only (protected by lock)
+    struct FirstFrame {
+      static nonisolated(unsafe) var isFirst = true
+      static let lock = NSLock()
+    }
+
+    guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+      print("⚠️ Failed to extract pixel buffer from sample")
+      return
+    }
+
+    // Read filter parameters atomically
+    filterParamsLock.lock()
+    let params = filterParams
+    filterParamsLock.unlock()
+
+    // Log first frame only
+    FirstFrame.lock.lock()
+    let isFirstFrame = FirstFrame.isFirst
+    if FirstFrame.isFirst {
+      FirstFrame.isFirst = false
+      let width = CVPixelBufferGetWidth(pixelBuffer)
+      let height = CVPixelBufferGetHeight(pixelBuffer)
+      print("📹 First frame received: \(width)x\(height)")
+    }
+    FirstFrame.lock.unlock()
 
     // Convert to CIImage
     let inputImage = CIImage(cvPixelBuffer: pixelBuffer)
+    if isFirstFrame {
+      print("✅ Created CIImage: \(inputImage.extent)")
+    }
 
     // Apply Julia set transformation with optional supersampling
     let juliaFilter = JuliaSetFilter()
+    if isFirstFrame {
+      print("✅ Created JuliaSetFilter")
+    }
+
     juliaFilter.inputImage = inputImage
-    juliaFilter.scale = _upscaleValue
-    juliaFilter.center = _centerValue
-    juliaFilter.warpFunction = _warpFunctionValue
-    juliaFilter.antialiasingMode = _aaMode
-    juliaFilter.zoomLevel = _zoomValue
-    var processedImage = juliaFilter.outputImage ?? inputImage
+    juliaFilter.scale = params.upscale
+    juliaFilter.center = params.center
+    juliaFilter.warpFunction = params.warpFunction
+    juliaFilter.antialiasingMode = params.aaMode
+    juliaFilter.zoomLevel = params.zoom
+
+    guard let juliaOutput = juliaFilter.outputImage else {
+      print("⚠️ JuliaSetFilter returned nil output - using original")
+      Task { @MainActor [weak self] in
+        self?.ciImage = inputImage
+      }
+      return
+    }
+    if isFirstFrame {
+      print("✅ Filter produced output: \(juliaOutput.extent)")
+    }
+
+    var processedImage = juliaOutput
 
     // Apply chromatic aberration if enabled
-    if _chromaEnabled {
+    if params.chromaEnabled {
       let chromaFilter = ChromaticAberrationFilter()
       chromaFilter.inputImage = processedImage
-      processedImage = chromaFilter.outputImage ?? processedImage
+      if let chromaOutput = chromaFilter.outputImage {
+        processedImage = chromaOutput
+        if isFirstFrame {
+          print("✅ ChromaticAberration applied")
+        }
+      } else {
+        print("⚠️ ChromaticAberration failed - skipping")
+      }
     }
 
     Task { @MainActor [weak self] in

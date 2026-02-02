@@ -7,9 +7,27 @@ public class ChromaticAberrationFilter: CIFilter {
     public var strength: CGFloat = 8.0
 
     private static let kernel: CIKernel? = {
-        guard let url = Bundle.module.url(forResource: "ChromaticAberration.ci", withExtension: "metallib"),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return try? CIKernel(functionName: "chromaticAberration", fromMetalLibraryData: data)
+        guard let url = Bundle.module.url(forResource: "ChromaticAberration.ci", withExtension: "metallib") else {
+            print("❌ ERROR: ChromaticAberration.ci.metallib not found in bundle")
+            print("Bundle URL: \(Bundle.module.bundleURL)")
+            return nil
+        }
+        print("✅ Found ChromaticAberration metallib at: \(url.path)")
+
+        guard let data = try? Data(contentsOf: url) else {
+            print("❌ ERROR: Failed to load ChromaticAberration.ci.metallib from \(url.path)")
+            return nil
+        }
+        print("✅ Loaded ChromaticAberration metallib data: \(data.count) bytes")
+
+        do {
+            let kernel = try CIKernel(functionName: "chromaticAberration", fromMetalLibraryData: data)
+            print("✅ SUCCESS: Loaded ChromaticAberration kernel from metallib")
+            return kernel
+        } catch {
+            print("❌ ERROR: Failed to create ChromaticAberration CIKernel: \(error)")
+            return nil
+        }
     }()
 
     override public var outputImage: CIImage? {

@@ -10,9 +10,27 @@ public class JuliaSetFilter: CIFilter {
   public var zoomLevel: CGFloat = 1.0  // 1.0 = no crop, >1.0 = crop inward
 
   private static let kernel: CIWarpKernel? = {
-    guard let url = Bundle.module.url(forResource: "JuliaWarp.ci", withExtension: "metallib"),
-          let data = try? Data(contentsOf: url) else { return nil }
-    return try? CIWarpKernel(functionName: "juliaWarp", fromMetalLibraryData: data)
+    guard let url = Bundle.module.url(forResource: "JuliaWarp.ci", withExtension: "metallib") else {
+      print("❌ ERROR: JuliaWarp.ci.metallib not found in bundle")
+      print("Bundle URL: \(Bundle.module.bundleURL)")
+      return nil
+    }
+    print("✅ Found metallib at: \(url.path)")
+
+    guard let data = try? Data(contentsOf: url) else {
+      print("❌ ERROR: Failed to load JuliaWarp.ci.metallib from \(url.path)")
+      return nil
+    }
+    print("✅ Loaded metallib data: \(data.count) bytes")
+
+    do {
+      let kernel = try CIWarpKernel(functionName: "juliaWarp", fromMetalLibraryData: data)
+      print("✅ SUCCESS: Loaded JuliaWarp kernel from metallib")
+      return kernel
+    } catch {
+      print("❌ ERROR: Failed to create CIWarpKernel: \(error)")
+      return nil
+    }
   }()
 
   override public var outputImage: CIImage? {
