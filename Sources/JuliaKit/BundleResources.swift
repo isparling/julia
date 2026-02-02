@@ -51,6 +51,17 @@ enum BundleResources {
       return Bundle.main
     }
 
+    // Strategy 2.5: Explicitly look for package bundle in .app Resources folder
+    // The bundle is at: Contents/Resources/CameraDemo_JuliaKit.bundle
+    if let resourcePath = Bundle.main.resourcePath {
+      let bundlePath = "\(resourcePath)/CameraDemo_JuliaKit.bundle"
+      if let bundle = Bundle(path: bundlePath),
+         bundle.url(forResource: "JuliaWarp.ci", withExtension: "metallib") != nil {
+        print("✅ BundleResources: Found .app bundle at: \(bundlePath)")
+        return bundle
+      }
+    }
+
     // Strategy 3: Try resources in main bundle's Resources subdirectory
     if let resourcePath = Bundle.main.resourcePath {
       let resourceBundle = Bundle(path: resourcePath)
