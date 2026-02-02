@@ -1,4 +1,5 @@
 import CoreImage
+import Foundation
 
 // MARK: - Julia Set Filter
 public class JuliaSetFilter: CIFilter {
@@ -10,25 +11,37 @@ public class JuliaSetFilter: CIFilter {
   public var zoomLevel: CGFloat = 1.0  // 1.0 = no crop, >1.0 = crop inward
 
   private static let kernel: CIWarpKernel? = {
-    guard let url = Bundle.module.url(forResource: "JuliaWarp.ci", withExtension: "metallib") else {
-      print("❌ ERROR: JuliaWarp.ci.metallib not found in bundle")
-      print("Bundle URL: \(Bundle.module.bundleURL)")
+    // Use safe bundle accessor instead of Bundle.module to avoid fatal errors
+    guard let bundle = BundleResources.resourceBundle else {
+      print("❌ JuliaSetFilter ERROR: JuliaKit resource bundle not available")
       return nil
     }
-    print("✅ Found metallib at: \(url.path)")
+
+    guard let url = bundle.url(forResource: "JuliaWarp.ci", withExtension: "metallib") else {
+      print("❌ JuliaSetFilter ERROR: JuliaWarp.ci.metallib not found in bundle")
+      print("Bundle path: \(bundle.bundlePath)")
+      if let resourcePath = bundle.resourcePath {
+        print("Resource path: \(resourcePath)")
+        let metallibs = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath))?
+          .filter { $0.hasSuffix(".metallib") } ?? []
+        print("Found metallibs: \(metallibs)")
+      }
+      return nil
+    }
+    print("✅ JuliaSetFilter: Found metallib at: \(url.path)")
 
     guard let data = try? Data(contentsOf: url) else {
-      print("❌ ERROR: Failed to load JuliaWarp.ci.metallib from \(url.path)")
+      print("❌ JuliaSetFilter ERROR: Failed to load metallib from \(url.path)")
       return nil
     }
-    print("✅ Loaded metallib data: \(data.count) bytes")
+    print("✅ JuliaSetFilter: Loaded metallib data: \(data.count) bytes")
 
     do {
       let kernel = try CIWarpKernel(functionName: "juliaWarp", fromMetalLibraryData: data)
-      print("✅ SUCCESS: Loaded JuliaWarp kernel from metallib")
+      print("✅ JuliaSetFilter SUCCESS: Loaded JuliaWarp kernel")
       return kernel
     } catch {
-      print("❌ ERROR: Failed to create CIWarpKernel: \(error)")
+      print("❌ JuliaSetFilter ERROR: Failed to create CIWarpKernel: \(error)")
       return nil
     }
   }()

@@ -1,4 +1,5 @@
 import CoreImage
+import Foundation
 
 // MARK: - Chromatic Aberration Filter
 public class ChromaticAberrationFilter: CIFilter {
@@ -7,25 +8,37 @@ public class ChromaticAberrationFilter: CIFilter {
     public var strength: CGFloat = 8.0
 
     private static let kernel: CIKernel? = {
-        guard let url = Bundle.module.url(forResource: "ChromaticAberration.ci", withExtension: "metallib") else {
-            print("❌ ERROR: ChromaticAberration.ci.metallib not found in bundle")
-            print("Bundle URL: \(Bundle.module.bundleURL)")
+        // Use safe bundle accessor instead of Bundle.module to avoid fatal errors
+        guard let bundle = BundleResources.resourceBundle else {
+            print("❌ ChromaticAberrationFilter ERROR: JuliaKit resource bundle not available")
             return nil
         }
-        print("✅ Found ChromaticAberration metallib at: \(url.path)")
+
+        guard let url = bundle.url(forResource: "ChromaticAberration.ci", withExtension: "metallib") else {
+            print("❌ ChromaticAberrationFilter ERROR: ChromaticAberration.ci.metallib not found in bundle")
+            print("Bundle path: \(bundle.bundlePath)")
+            if let resourcePath = bundle.resourcePath {
+                print("Resource path: \(resourcePath)")
+                let metallibs = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath))?
+                    .filter { $0.hasSuffix(".metallib") } ?? []
+                print("Found metallibs: \(metallibs)")
+            }
+            return nil
+        }
+        print("✅ ChromaticAberrationFilter: Found metallib at: \(url.path)")
 
         guard let data = try? Data(contentsOf: url) else {
-            print("❌ ERROR: Failed to load ChromaticAberration.ci.metallib from \(url.path)")
+            print("❌ ChromaticAberrationFilter ERROR: Failed to load metallib from \(url.path)")
             return nil
         }
-        print("✅ Loaded ChromaticAberration metallib data: \(data.count) bytes")
+        print("✅ ChromaticAberrationFilter: Loaded metallib data: \(data.count) bytes")
 
         do {
             let kernel = try CIKernel(functionName: "chromaticAberration", fromMetalLibraryData: data)
-            print("✅ SUCCESS: Loaded ChromaticAberration kernel from metallib")
+            print("✅ ChromaticAberrationFilter SUCCESS: Loaded ChromaticAberration kernel")
             return kernel
         } catch {
-            print("❌ ERROR: Failed to create ChromaticAberration CIKernel: \(error)")
+            print("❌ ChromaticAberrationFilter ERROR: Failed to create CIKernel: \(error)")
             return nil
         }
     }()
