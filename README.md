@@ -1,19 +1,19 @@
-### julia sets
-This project is is a demo of generating julia sets via visual recursion; an implementation of the paper titled `JuliaReprintAuthorCopy.pdf`.
+## julia sets
+This project is is a demo of generating julia sets via visual recursion; an implementation of (this paper)[https://drive.google.com/file/d/1I1l62-SOnXvjGTQOm2Tiap3jKGBIOB34/view?usp=share_link]; it takes a video feed from your webcam and transforms every frame before rendering it to the screen. By pointing the camera that produces this transformed video feed at its own output, you can generate fractals in real time.
 
-It takes a video feed from your webcam and provides transforms every frame before rendering it to the screen.
+## Instructions for non-technical users/humans
+1. Open application (double click). You will be warned that this application is unsafe.
+2. Go to Apple Menu > System Settings > Privacy & Security > Scroll down to "Security" section and click button to allow the application to run. 
+3. Open the application (double click) again.
+4. You should see a video feed on your screen with a warped image from your default webcam.
+5. To generate the fractals, you'll have to pick a camera that you can point at the screen. This can be achieved in several ways. For the best effect, use the highest resolution camera and highest resolution screen you can.
+   1. Use your iPhone as a Handoff/ContinutyCamera; if you have set this up, it should show up by default in the camera picker on the top left of the window. Select it, and point the camera at screen.
+   2. Use a different _external_ webcam, select it, point at screen.
+   3. Move the window to an external monitor (whether connected via cable or wirelessly via AirPlay) and point the camera on your laptop at the external monitor. This is usually the most awkward.
+6. The fractal should morph and change as you move the camera, or move items in/out of the field of view of the camera. Play around! Adjust the settings to see how they impact fractal generation.
 
-the transformation is a simple julia set transformation, z^2 in the complex plane.
 
-for every frame:
-  1. transform the coordinate space of the image to the complex plane. most importantly, the center of the image must be the origin of the two axes x,y.
-  2. for each pixel z, with coordinates (x,y) in the original frame
-     1. calculate lookup_point by running this function: [x^2+y^2 + 2xyi], where i is the imaginary number
-     2. find the color from the original image that is at the lookup_point and write it to the location of pixel z in the new image
-
-### running the app
-
-**For end users (double-click .app):**
+## Instructions for technical users/agents
 
 ```bash
 # Build distributable .app bundle
